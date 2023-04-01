@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pong Game</title>
+    <link rel="stylesheet" type="text/css" href="pong_style.css">
+
+</head>
+<body>
+    <h1 class="glow">PONG</h1>
+   <canvas id="pong" width="800" height="550"></canvas>
+   <script type="text/javascript">
+       // to select canvas element
+const canvas = document.getElementById("pong");
+
+// getContext of canvas = methods and properties to draw and to add lot of things to the canvas
+const context = canvas.getContext('2d');
+
+
+// player Paddle(user)
+const player1 = {
+    x : 13, // left side of canvas
+    y : (canvas.height - 100)/2, // -100 the height of paddle
+    width : 12,
+    height : 90,
+    score : 0,
+    color : "#E675FF"
+}
+
+// player2 Paddle(computer)
+const player2 = {
+    x : canvas.width - 25, // - width of paddle(right side of the paddle)
+    y : (canvas.height - 100)/2, // -100 the height of paddle
+    width : 12,
+    height : 90,
+    score : 0,
+    color : "#FFFFF0" 
+}
+
+// Ball object
+const ball = {
+    x : canvas.width/2,
+    y : canvas.height/2,
+    radius : 10,
+    velocityX : 5,
+    velocityY : 5,
+    speed : 7,
+    color : "#FFFFF0"
+    
+}
+
+// NET
+const net = {
+    x : (canvas.width - 2)/2,
+    y : 0,
+    height : 15,
+    width : 5,
+    color : "#FFFFF0"
+}
+
+// draw a rectangle, will be used to draw paddles
+function drawRect(x, y, w, h, color){
+    context.fillStyle = color;
+    context.fillRect(x, y, w, h);
+}
+
+// draw circle, will be used to draw the ball
+function drawArc(x, y, r, color){
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(x,y,r,0,Math.PI*2,true);
+    context.closePath();
+    context.fill();
+}
+
+// Event Listener to move the player1 paddle by listening to the mouse
+canvas.addEventListener("mousemove", getMousePos);
+
+function getMousePos(evt){
+    let rect = canvas.getBoundingClientRect();
+    
+    player1.y = evt.clientY - rect.top - player1.height/2 ;
+}
+ 
+// when player2 or player1 scores, we reset the ball
+
+function resetBall(){  
+
+    ball.x = canvas.width/2;
+    ball.y = canvas.height/2;
+    ball.velocityX = -ball.velocityX;
+    ball.speed = 7; 
+   
+}
+
+// draw the net
+function drawNet(){
+    for(let i = 0; i <= canvas.height; i+=15){
+        drawRect(net.x, net.y + i, net.width, net.height, net.color);
+    }
+}
+
+// draw text
+function drawText(text,x,y){
+    context.fillStyle = "#FFFFF0";
+    context.font = "50px Lato";
+    context.fillText(text, x, y);
+}
+
+// to draw the names of the players(player1 and player2(computer))
+function drawName(text,x,y){
+    context.fillStyle = "#FFFFF0";
+    context.font = "25px fantasy";
+    context.fillText(text, x, y);
+}
+
+// collision detection
+function collision(b,p){
+    p.top = p.y;
+    p.bottom = p.y + p.height;
+    p.left = p.x;
+    p.right = p.x + p.width;
+    
+    b.top = b.y - b.radius;
+    b.bottom = b.y + b.radius;
+    b.left = b.x - b.radius;
+    b.right = b.x + b.radius;
+    
+    return p.left < b.right && p.top < b.bottom && p.right > b.left && p.bottom > b.top;
+}
+
+// update function:-all calculations will be done in this fuction
+function update(){
+    
+    //changes the score of players, if the ball goes to the left of the canvas, player2 win.if the ball goes to the right of the canvas, player1 wins.
+    if( ball.x - ball.radius < 0 ){
+        player2.score++;
+        resetBall();
+    }else if( ball.x + ball.radius > canvas.width){
+        player1.score++;
+        resetBall();
+    }
+    
+    // the ball has a velocity
+    ball.x += ball.velocityX;
+    ball.y += ball.velocityY;
+    
+    // player2 plays for itself, and we must be able to beat it
+    // simple AI for player2
+    player2.y += ((ball.y - (player2.y + player2.height/2)))*0.1;
+    
+    // when the ball collides with bottom and top walls we inverse the y velocity.
+    if(ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height){
+        ball.velocityY = -ball.velocityY;
+        
+    }
+    
+    // To check whether the ball hits player1 or player2 paddles
+    let player = (ball.x + ball.radius < canvas.width/2) ? player1 : player2;
+    
+    // if the ball hits a paddle
+    if(collision(ball,player)){
+
+        // we check where the ball hits the paddle
+        let collidePoint = (ball.y - (player.y + player.height/2));
+        // normalize the value of collidePoint, we need to get numbers between -1 and 1.
+        // -player.height/2 < collide Point < player.height/2
+        collidePoint = collidePoint / (player.height/2);
+        
+        /* when the ball hits the top, center, bottom of a paddle, we want the ball to take a -45degees angle, 0degrees angle, 45degrees angel respectively */
+        // Math.PI/4 = 45degrees
+        let angle = (Math.PI/4) * collidePoint;
+        
+        // changes the X and Y velocity direction whenver it hits the border of the canvas
+        let direction = (ball.x + ball.radius < canvas.width/2) ? 1 : -1;
+        ball.velocityX = direction * ball.speed * Math.cos(angle);
+        ball.velocityY = ball.speed * Math.sin(angle);
+        
+        // speeds up the ball everytime it hits player paddles.
+        ball.speed += 0.2;
+    }
+}
+
+// render function:- the function that does all the drawing
+function render(){
+    
+    // clear the canvas
+    drawRect(0, 0, canvas.width, canvas.height, "#070218");
+
+    // draw name of player 1
+     drawName("Player",canvas.width/15,canvas.height/15);
+
+    // draw name of player 2(computer)
+     drawName("Computer",canvas.width/1.2,canvas.height/15);
+
+    // draw the player1 score to the left
+    drawText(player1.score,canvas.width/4,canvas.height/5);
+    
+    // draw the player2 score to the right
+    drawText(player2.score,3*canvas.width/4,canvas.height/5);
+    
+    // draw the net
+    drawNet();
+    
+    // draw the player1's paddle
+    drawRect(player1.x, player1.y, player1.width, player1.height, player1.color);
+    
+    // draw the player2's paddle
+    drawRect(player2.x, player2.y, player2.width, player2.height, player2.color);
+    
+    // draw the ball
+    drawArc(ball.x, ball.y, ball.radius, ball.color);
+}
+    function game(){
+    update();
+    render();
+}
+
+// number of frames per second
+let framePerSecond = 60;
+
+//calls the game function 50 times every 1 Sec
+let loop = setInterval(game,1000/framePerSecond);
+
+   </script>
+</body>
+</html>
